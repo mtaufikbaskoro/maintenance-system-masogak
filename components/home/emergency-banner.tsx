@@ -69,7 +69,7 @@ export function EmergencyBanner() {
                   Ajukan Laporan Gangguan / Work Order
                 </CardTitle>
                 <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400">
-                  Kirimkan detail kendala mesin ke tim Maintenance MASOGAK. Tiket prioritas darurat akan langsung diteruskan ke tim siaga lapangan.
+                  Kirimkan detail kendala mesin ke tim maintenance. Tiket prioritas darurat akan langsung diteruskan ke tim siaga lapangan.
                 </p>
               </CardHeader>
 
@@ -273,7 +273,7 @@ export function EmergencyBanner() {
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-blue-600" />
                 <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                  Target SLA Respon Teknisi MASOGAK
+                  Target SLA Respon Teknisi
                 </h4>
               </div>
               <div className="space-y-2.5 text-xs">

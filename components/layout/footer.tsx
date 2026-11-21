@@ -15,7 +15,7 @@ export function Footer() {
               </div>
               <div className="flex flex-col">
                 <span className="text-lg font-black tracking-wider text-zinc-900 dark:text-zinc-50">
-                  MASOGAK
+                  Maintenance System
                 </span>
                 <span className="text-xs font-semibold tracking-wider uppercase text-blue-600 dark:text-blue-400">
                   Maintenance System & CMMS
@@ -83,17 +83,14 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="#laporan-cepat" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                  Pelaporan Breakdown
-                </Link>
               </li>
               <li>
-                <Link href="#bantuan" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                <Link href="#monitoring" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                   Checklist Inspeksi Harian
                 </Link>
               </li>
               <li>
-                <Link href="#bantuan" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                <Link href="#monitoring" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                   Prosedur Tanggap Darurat
                 </Link>
               </li>
@@ -114,7 +111,7 @@ export function Footer() {
               <div className="flex items-start gap-2.5">
                 <MapPin className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                 <span className="text-xs">
-                  Maintenance Operations Center, Gedung Rekayasa & Workshop MASOGAK
+                  Maintenance Operations Center, Gedung Rekayasa & Workshop
                 </span>
               </div>
               <div className="flex items-center gap-2.5">
@@ -123,7 +120,7 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="h-4 w-4 text-indigo-500 shrink-0" />
-                <span className="text-xs font-mono">maintenance@masogak.internal</span>
+                <span className="text-xs font-mono">maintenance@internal</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <ShieldAlert className="h-4 w-4 text-rose-500 shrink-0" />
@@ -138,7 +135,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
           <p className="text-zinc-500 dark:text-zinc-400">
-            &copy; 2026 MASOGAK Maintenance System. Hak cipta dilindungi.
+            &copy; 2026 Maintenance System. Hak cipta dilindungi.
           </p>
           <div className="flex items-center gap-4 text-zinc-500 dark:text-zinc-400">
             <span>Versi Sistem 1.0.0-PROD</span>

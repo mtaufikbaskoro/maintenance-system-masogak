@@ -60,7 +60,7 @@ const features = [
     title: "Respon Cepat Breakdown Darurat",
     description:
       "Kanal pelaporan darurat untuk operator lapangan saat mesin berhenti. Dispatch tim tanggap darurat dengan target penanganan secepatnya.",
-    highlights: ["Eskalasi prioritas tinggi", "Notifikasi helpdesk instan", "Pelacakan downtime mesin"],
+    highlights: ["Eskalasi prioritas tinggi", "Notifikasi gangguan", "Pelacakan downtime mesin"],
   },
   {
     icon: BarChart3,
@@ -81,7 +81,7 @@ export function FeaturesSection() {
         <SectionHeader
           badge="KAPABILITAS SISTEM"
           badgeVariant="default"
-          title="Modul Lengkap Pemeliharaan MASOGAK"
+          title="Modul Lengkap Pemeliharaan"
           description="Dirancang khusus untuk mendukung operasional fasilitas dan mesin industri dengan standar keandalan tinggi dan efisiensi terukur."
         />
 

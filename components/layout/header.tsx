@@ -5,15 +5,11 @@ import Link from "next/link";
 import {
   Wrench,
   Activity,
-  AlertTriangle,
   Menu,
   X,
-  LogIn,
   Layers,
   CalendarCheck,
-  ShieldCheck,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/shared/status-pill";
 
 export function Header() {
@@ -33,7 +29,7 @@ export function Header() {
             </div>
             <div className="flex flex-col">
               <span className="text-lg font-black tracking-wider text-zinc-900 dark:text-zinc-50 flex items-center gap-1.5">
-                MASOGAK
+                Maintenance
                 <span className="text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 px-1.5 py-0.2 rounded">
                   CMMS
                 </span>
@@ -64,27 +60,11 @@ export function Header() {
             >
               Work Order
             </Link>
-            <Link
-              href="#bantuan"
-              className="px-3 py-1.5 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800/60 transition-colors"
-            >
-              Helpdesk
-            </Link>
           </nav>
 
-          {/* Right Action Buttons & Live Indicator */}
+          {/* System status */}
           <div className="hidden lg:flex items-center gap-3">
             <StatusPill status="operational" label="Sistem Online" size="sm" />
-            <a href="#laporan-cepat">
-              <Button variant="outline" size="sm" className="gap-1.5 border-zinc-300 dark:border-zinc-700">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                <span>Lapor Gangguan</span>
-              </Button>
-            </a>
-            <Button size="sm" className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white shadow-xs">
-              <LogIn className="h-3.5 w-3.5" />
-              <span>Portal Masuk</span>
-            </Button>
           </div>
 
           {/* Mobile menu button */}
@@ -129,27 +109,6 @@ export function Header() {
               <CalendarCheck className="h-4 w-4 text-emerald-500" />
               Alur Work Order
             </Link>
-            <Link
-              href="#bantuan"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg"
-            >
-              <ShieldCheck className="h-4 w-4 text-purple-500" />
-              Pusat Bantuan & SOP
-            </Link>
-          </div>
-
-          <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 flex flex-col gap-2">
-            <a href="#laporan-cepat" onClick={() => setIsOpen(false)}>
-              <Button variant="outline" className="w-full justify-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <span>Laporkan Gangguan Mesin</span>
-              </Button>
-            </a>
-            <Button className="w-full justify-center gap-2 bg-blue-600 hover:bg-blue-700">
-              <LogIn className="h-4 w-4" />
-              <span>Masuk Portal Teknisi</span>
-            </Button>
           </div>
         </div>
       )}

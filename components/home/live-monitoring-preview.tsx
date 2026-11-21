@@ -151,7 +151,7 @@ export function LiveMonitoringPreview() {
         badge="MONITORING REAL-TIME"
         badgeVariant="info"
         title="Pemantauan Langsung Unit Aset & Mesin"
-        description="Pantau indikator performa vital mesin, skor kesehatan komponen, dan status operasional harian secara terpadu di sistem MASOGAK."
+        description="Pantau indikator performa vital mesin, skor kesehatan komponen, dan status operasional harian secara terpadu."
       />
 
       {/* Control Bar: Search & Filter Tabs */}
@@ -346,7 +346,7 @@ export function LiveMonitoringPreview() {
               <span>Log Aktivitas Work Order Terkini</span>
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-              Pembaruan penanganan teknisi langsung dari lantai operasional MASOGAK
+              Pembaruan penanganan teknisi langsung dari lantai operasional
             </p>
           </div>
           <Badge variant="outline" className="font-mono text-xs">

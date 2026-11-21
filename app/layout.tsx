@@ -13,11 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MASOGAK Maintenance System - Sistem Manajemen Pemeliharaan & Perawatan Terpadu",
+  title: "Maintenance System - Sistem Manajemen Pemeliharaan & Perawatan Terpadu",
   description:
-    "Platform terpadu untuk monitoring keandalan aset mesin, penjadwalan preventive maintenance otomatis, pelacakan work order, dan respon darurat operasional MASOGAK.",
+    "Platform terpadu untuk monitoring keandalan aset mesin, penjadwalan preventive maintenance otomatis, pelacakan work order, dan respon darurat operasional.",
   keywords: [
-    "MASOGAK",
     "Maintenance System",
     "CMMS",
     "Pemeliharaan Mesin",
