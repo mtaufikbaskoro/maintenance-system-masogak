@@ -369,15 +369,13 @@ export async function saveAssignment(formData: FormData) {
   if (plan.status !== PlanStatus.DRAFT) throw new Error("Assignment hanya dapat diubah pada plan Draft.");
   if (plannedDateValue) {
     const plannedDate = dateOnly(plannedDateValue);
-    if (plannedDate < plan.periodStart || plannedDate > plan.periodEnd) throw new Error("Tanggal pekerjaan harus berada dalam periode plan.");
+    const latestAllowedDate = new Date(plan.periodEnd);
+    latestAllowedDate.setUTCDate(latestAllowedDate.getUTCDate() + 1);
+    if (plannedDate < plan.periodStart || plannedDate > latestAllowedDate) throw new Error("Tanggal pekerjaan harus berada dalam periode plan atau satu hari setelahnya.");
   }
   if (picId) {
     const person = await prisma.person.findUnique({ where: { id: picId } });
-    if (!person?.active) throw new Error("PIC tidak ditemukan atau sudah nonaktif.");
-  }
-  if (groupId) {
-    const assignedGroup = await prisma.maintenanceGroup.findFirst({ where: { id: groupId, planId }, select: { teamLeaderId: true } });
-    if (picId && assignedGroup?.teamLeaderId && picId !== assignedGroup.teamLeaderId) throw new Error("PIC harus merupakan team leader yang ditetapkan untuk area ini.");
+    if (!person?.active || person.isTeamLead) throw new Error("PIC harus personel aktif yang bukan team leader.");
   }
   if (groupId) {
     const group = await prisma.maintenanceGroup.findFirst({ where: { id: groupId, planId } });
@@ -468,6 +466,20 @@ export async function createPlanGroup(formData: FormData) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new Error("Nama area/line sudah ada pada plan ini.");
     throw error;
   }
+  revalidatePath("/");
+}
+
+export async function updatePlanGroupTeamLeader(formData: FormData) {
+  const id = text(formData, "id");
+  const teamLeaderId = text(formData, "teamLeaderId") || null;
+  const group = await prisma.maintenanceGroup.findUnique({ where: { id }, include: { plan: true } });
+  if (!group) throw new Error("Area/line tidak ditemukan.");
+  if (group.plan.status !== PlanStatus.DRAFT) throw new Error("Team leader hanya dapat diubah pada plan Draft.");
+  if (teamLeaderId) {
+    const leader = await prisma.person.findFirst({ where: { id: teamLeaderId, active: true, isTeamLead: true } });
+    if (!leader) throw new Error("Pilih personel aktif yang berstatus team leader.");
+  }
+  await prisma.maintenanceGroup.update({ where: { id }, data: { teamLeaderId } });
   revalidatePath("/");
 }
 
