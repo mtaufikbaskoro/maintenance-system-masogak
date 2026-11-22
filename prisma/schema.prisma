@@ -142,10 +142,22 @@ model Person {
   employeeCode        String?            @unique
   displayName         String
   active              Boolean            @default(true)
+  isTeamLead          Boolean            @default(false)
+  picGroupId          String?
+  picGroup            PicGroup?          @relation(fields: [picGroupId], references: [id], onDelete: SetNull)
   assignments         WorkAssignment[]
   leadingGroups       MaintenanceGroup[]  @relation("TeamLeader")
 
   @@index([displayName])
+  @@index([picGroupId])
+}
+
+model PicGroup {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  people    Person[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model WorkAssignment {

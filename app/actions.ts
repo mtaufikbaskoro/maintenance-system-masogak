@@ -359,6 +359,10 @@ export async function saveAssignment(formData: FormData) {
     if (!person?.active) throw new Error("PIC tidak ditemukan atau sudah nonaktif.");
   }
   if (groupId) {
+    const assignedGroup = await prisma.maintenanceGroup.findFirst({ where: { id: groupId, planId }, select: { teamLeaderId: true } });
+    if (picId && assignedGroup?.teamLeaderId && picId !== assignedGroup.teamLeaderId) throw new Error("PIC harus merupakan team leader yang ditetapkan untuk area ini.");
+  }
+  if (groupId) {
     const group = await prisma.maintenanceGroup.findFirst({ where: { id: groupId, planId } });
     if (!group) throw new Error("Area/line tidak sesuai dengan plan.");
   }
@@ -414,6 +418,10 @@ export async function createPlanGroup(formData: FormData) {
   const name = text(formData, "name");
   const teamLeaderId = text(formData, "teamLeaderId") || null;
   if (!name) throw new Error("Nama area/line wajib diisi.");
+  if (teamLeaderId) {
+    const leader = await prisma.person.findFirst({ where: { id: teamLeaderId, active: true, isTeamLead: true } });
+    if (!leader) throw new Error("Pilih personel aktif yang berstatus team leader.");
+  }
   const plan = await prisma.maintenancePlan.findUnique({ where: { id: planId } });
   if (!plan || plan.status !== PlanStatus.DRAFT) throw new Error("Area/line hanya dapat ditambahkan ke plan Draft.");
   try {
@@ -439,7 +447,9 @@ export async function createPerson(formData: FormData) {
   const employeeCode = text(formData, "employeeCode") || null;
   if (!displayName) throw new Error("Nama personel wajib diisi.");
   try {
-    await prisma.person.create({ data: { displayName, employeeCode, active: true } });
+      const picGroupName = text(formData, "picGroupName").trim().toLowerCase();
+      const picGroup = picGroupName ? await prisma.picGroup.upsert({ where: { name: picGroupName }, create: { name: picGroupName }, update: {} }) : null;
+      await prisma.person.create({ data: { displayName, employeeCode, active: true, isTeamLead: text(formData, "isTeamLead") === "true", picGroupId: picGroup?.id ?? null } });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       throw new Error("Kode karyawan sudah digunakan.");
@@ -454,9 +464,11 @@ export async function updatePerson(formData: FormData) {
   const displayName = text(formData, "displayName");
   if (!displayName) throw new Error("Nama personel wajib diisi.");
   try {
+    const picGroupName = text(formData, "picGroupName").trim().toLowerCase();
+    const picGroup = picGroupName ? await prisma.picGroup.upsert({ where: { name: picGroupName }, create: { name: picGroupName }, update: {} }) : null;
     await prisma.person.update({
       where: { id },
-      data: { displayName, employeeCode: text(formData, "employeeCode") || null, active: text(formData, "active") === "true" },
+      data: { displayName, employeeCode: text(formData, "employeeCode") || null, active: text(formData, "active") === "true", isTeamLead: text(formData, "isTeamLead") === "true", picGroupId: picGroup?.id ?? null },
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

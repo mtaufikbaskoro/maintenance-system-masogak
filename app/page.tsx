@@ -14,7 +14,7 @@ async function DashboardData() {
       orderBy: [{ year: "desc" }, { weekNumber: "desc" }],
       include: { _count: { select: { assignments: true, groups: true } } },
     }),
-    prisma.person.findMany({ orderBy: [{ active: "desc" }, { displayName: "asc" }] }),
+    prisma.person.findMany({ orderBy: [{ active: "desc" }, { displayName: "asc" }], include: { picGroup: true } }),
     prisma.sapImportBatch.findMany({ orderBy: { importedAt: "desc" }, take: 10 }),
     prisma.sapWorkOrder.findMany({ orderBy: { createdAt: "desc" }, take: 100, include: { sourceBatch: { select: { sourceFileName: true } } } }),
     prisma.maintenanceGroup.findMany({ orderBy: [{ planId: "asc" }, { sortOrder: "asc" }, { name: "asc" }], include: { teamLeader: { select: { displayName: true } } } }),
@@ -49,6 +49,9 @@ async function DashboardData() {
         displayName: person.displayName,
         employeeCode: person.employeeCode ?? "",
         active: person.active,
+        isTeamLead: person.isTeamLead,
+        picGroupId: person.picGroupId ?? "",
+        picGroupName: person.picGroup?.name ?? "",
       }))}
       sapBatches={batches.map(batch => ({ ...batch, importedAt: batch.importedAt.toISOString() }))}
       sapOrders={orders}

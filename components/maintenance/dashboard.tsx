@@ -7,7 +7,7 @@ import { SapImport } from "@/components/maintenance/sap-import";
 import { AssignmentManager } from "@/components/maintenance/assignment-manager";
 
 type Plan = { id: string; name: string; weekNumber: number; year: number; periodStart: string; periodEnd: string; site: string; status: string; assignmentCount: number; groupCount: number };
-type Person = { id: string; displayName: string; employeeCode: string; active: boolean };
+type Person = { id: string; displayName: string; employeeCode: string; active: boolean; isTeamLead: boolean; picGroupId: string; picGroupName: string };
 type SapBatch = { id: string; sourceFileName: string; importedAt: string; status: string; rowCount: number; errorCount: number };
 type SapOrder = { id: string; sapOrderNumber: string; description: string; functionalLocation: string; sourceRowNumber: number | null; sourceBatch: { sourceFileName: string } };
 type PlanGroup = { id: string; planId: string; name: string; teamLeaderId: string; teamLeaderName: string };
@@ -93,7 +93,7 @@ export function MaintenanceDashboard({ plans, people, sapBatches, sapOrders, gro
         </form>}
         {editingPerson && <form onSubmit={submit(editingPerson.id ? updatePerson : createPerson, editingPerson.id ? "Personel berhasil diperbarui." : "Personel berhasil ditambahkan.", () => setEditingPerson(null))} className="space-y-3">
           {editingPerson.id && <input type="hidden" name="id" value={editingPerson.id} />}
-          <Field label="Nama personel" name="displayName" defaultValue={editingPerson.displayName} required /><Field label="Kode karyawan (opsional)" name="employeeCode" defaultValue={editingPerson.employeeCode} />
+           <Field label="Nama personel" name="displayName" defaultValue={editingPerson.displayName} required /><Field label="Kode karyawan (opsional)" name="employeeCode" defaultValue={editingPerson.employeeCode} /><Field label="Grup PIC (opsional)" name="picGroupName" defaultValue={editingPerson.picGroupName} /><label className="flex items-center gap-2 text-xs"><input type="checkbox" name="isTeamLead" value="true" defaultChecked={editingPerson.isTeamLead}/> Team leader</label>
           {editingPerson.id && <label className="block text-[11px] font-semibold text-slate-600">Status<select name="active" defaultValue={String(editingPerson.active)} className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs"><option value="true">Aktif</option><option value="false">Nonaktif</option></select></label>}
           <FormError message={error} /><FormButtons pending={pending} onCancel={() => setEditingPerson(null)} submitLabel={editingPerson.id ? "Simpan perubahan" : "Tambah personel"} />
         </form>}
@@ -106,7 +106,7 @@ export function MaintenanceDashboard({ plans, people, sapBatches, sapOrders, gro
 
 function makeFormData(values: Record<string, string>) { const data = new FormData(); Object.entries(values).forEach(([key, value]) => data.set(key, value)); return data; }
 function emptyPlan(): Plan { const today = new Date().toISOString().slice(0, 10); return { id: "", name: "", weekNumber: 1, year: new Date().getFullYear(), periodStart: today, periodEnd: today, site: "", status: "DRAFT", assignmentCount: 0, groupCount: 0 }; }
-function emptyPerson(): Person { return { id: "", displayName: "", employeeCode: "", active: true }; }
+function emptyPerson(): Person { return { id: "", displayName: "", employeeCode: "", active: true, isTeamLead: false, picGroupId: "", picGroupName: "" }; }
 function emptyArea(): AreaMapping { return { id: "", functionalLocation: "", areaName: "", machineDescription: "", durationHours: null, active: true }; }
 function navClass(active: boolean) { return `flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition ${active ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`; }
 function Metric({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) { return <div className="rounded-xl border border-slate-200 bg-white p-4"><div className="mb-3 flex items-center justify-between text-[10px] text-slate-500">{label}<span className="text-slate-400">{icon}</span></div><strong className="text-2xl tracking-tight">{value}</strong></div>; }
