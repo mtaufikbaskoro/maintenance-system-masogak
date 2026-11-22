@@ -419,7 +419,7 @@ export async function setAssignmentScheduleSlot(formData: FormData) {
   const day = Number(text(formData, "day"));
   const hour = Number(text(formData, "hour"));
   const enabled = text(formData, "enabled") === "true";
-  if (!assignmentId || !Number.isInteger(day) || day < 0 || day > 6 || !Number.isInteger(hour) || hour < 7 || hour > 23) throw new Error("Jadwal tidak valid.");
+  if (!assignmentId || !Number.isInteger(day) || day < 0 || day > 6 || !Number.isInteger(hour) || hour < 7 || hour > 23 || hour === 12 || hour === 19) throw new Error("Jadwal tidak valid atau waktu istirahat.");
   const assignment = await prisma.workAssignment.findUnique({ where: { id: assignmentId }, include: { plan: true } });
   if (!assignment) throw new Error("Work order tidak ditemukan.");
   if (assignment.plan.status !== PlanStatus.DRAFT) throw new Error("Jadwal hanya dapat diubah pada plan Draft.");
@@ -432,6 +432,55 @@ export async function setAssignmentScheduleSlot(formData: FormData) {
   const existing = await prisma.scheduleBlock.findFirst({ where: { workAssignmentId: assignmentId, startAt } });
   if (enabled && !existing) await prisma.scheduleBlock.create({ data: { workAssignmentId: assignmentId, startAt, endAt, plannedHours: 1 } });
   if (!enabled && existing) await prisma.scheduleBlock.delete({ where: { id: existing.id } });
+  revalidatePath("/");
+}
+
+export async function initializePicSchedule(formData: FormData) {
+  const planId = text(formData, "planId");
+  if (!planId) throw new Error("Pilih plan terlebih dahulu.");
+  const plan = await prisma.maintenancePlan.findUnique({ where: { id: planId } });
+  if (!plan) throw new Error("Plan tidak ditemukan.");
+  if (plan.status !== PlanStatus.DRAFT) throw new Error("Jadwal hanya dapat diinisialisasi pada plan Draft.");
+
+  await prisma.$transaction(async tx => {
+    const workOrders = await tx.workAssignment.findMany({
+      where: { planId, picId: { not: null } },
+      orderBy: [{ picId: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+      select: { id: true, picId: true, plannedDurationMinutes: true },
+    });
+    const ids = workOrders.map(item => item.id);
+    if (ids.length) await tx.scheduleBlock.deleteMany({ where: { workAssignmentId: { in: ids } } });
+
+    const picDay = new Map<string, number>();
+    const picMinute = new Map<string, number>();
+    const blocks: { workAssignmentId: string; startAt: Date; endAt: Date; plannedHours: number }[] = [];
+    for (const item of workOrders) {
+      const picId = item.picId!;
+      const duration = Math.max(0, item.plannedDurationMinutes ?? 60);
+      let remaining = duration;
+      while (remaining > 0) {
+        const day = picDay.get(picId) ?? 0;
+        let minute = picMinute.get(picId) ?? 7 * 60;
+        if (day > 0 || minute >= 24 * 60) break;
+        if (minute >= 12 * 60 && minute < 13 * 60) minute = 13 * 60;
+        if (minute >= 19 * 60 && minute < 20 * 60) minute = 20 * 60;
+        if (minute >= 24 * 60) break;
+        const untilBreak = minute < 12 * 60 ? 12 * 60 - minute : minute < 19 * 60 ? 19 * 60 - minute : 24 * 60 - minute;
+        const length = Math.min(remaining, 60, untilBreak);
+        const date = new Date(plan.periodStart);
+        date.setUTCDate(date.getUTCDate() + day);
+        const startAt = new Date(date); startAt.setUTCHours(Math.floor(minute / 60), minute % 60, 0, 0);
+        const endAt = new Date(startAt.getTime() + length * 60_000);
+        blocks.push({ workAssignmentId: item.id, startAt, endAt, plannedHours: length / 60 });
+        remaining -= length;
+        minute += length;
+        if (minute >= 24 * 60) { remaining = 0; }
+        picDay.set(picId, day);
+        picMinute.set(picId, minute);
+      }
+    }
+    if (blocks.length) await tx.scheduleBlock.createMany({ data: blocks });
+  });
   revalidatePath("/");
 }
 
