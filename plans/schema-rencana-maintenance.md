@@ -98,7 +98,7 @@ Order yang dimasukkan ke rencana beserta detail rencana yang dapat berbeda dari 
 - `notes`
 - `createdAt`, `updatedAt`
 
-Untuk work order SAP, terapkan unique constraint pada `sapWorkOrderId` di seluruh assignment agar order hanya dapat berada pada satu minggu/rencana. Setiap assignment memiliki tepat satu PIC dan satu `plannedDurationMinutes` yang merupakan durasi kerja PIC yang ditugaskan. Pekerjaan tambahan tanpa nomor SAP dapat tetap dibuat sebagai assignment manual dengan aturan satu PIC dan satu durasi yang sama.
+Untuk work order SAP, terapkan unique constraint pada `sapWorkOrderId` di seluruh assignment agar order hanya dapat berada pada satu minggu/rencana. Saat impor SAP, assignment otomatis dibuat pada plan minggu berjalan dan boleh belum memiliki PIC, role, atau `plannedDurationMinutes` (semuanya nullable) sampai planner melengkapinya. Setelah ditugaskan, satu assignment memiliki tepat satu PIC dan satu durasi kerja PIC. Pekerjaan tambahan tanpa nomor SAP dapat tetap dibuat sebagai assignment manual dengan aturan satu PIC dan satu durasi yang sama.
 
 Catatan kualitas contoh: order **2003053741** tampak muncul dua kali pada file hasil dengan PIC dan durasi berbeda. Ini adalah kesalahan pada data contoh dan diabaikan; aplikasi tidak boleh meniru atau mendukung duplikasi tersebut.
 
@@ -111,7 +111,7 @@ Catatan kualitas contoh: order **2003053741** tampak muncul dua kali pada file h
 - `displayName`
 - `active`
 
-Setiap `WorkAssignment` memiliki satu `picId` (FK ke `Person`) dan satu `picRole` yang dikelola melalui master data: `T` teknisi, `O` operator, atau `P` production support. Jika diperlukan, `O/P` menjadi pilihan kategori/role pada master data. Team leader tidak disimpan per assignment; team leader diperoleh dari `MaintenanceGroup` (area/line) tempat assignment tersebut berada.
+`WorkAssignment.picId` dan `picRole` nullable selama assignment belum ditugaskan; setelah penugasan keduanya wajib diisi bersama. Role PIC adalah `T` teknisi, `O` operator, atau `P` production support. Team leader tidak disimpan per assignment; team leader diperoleh dari `MaintenanceGroup` (area/line) tempat assignment tersebut berada.
 
 ### `ScheduleBlock`
 
@@ -156,7 +156,7 @@ WorkAssignment 1 ─── 0..1 WorkExecution
 
 ## Alur data aplikasi
 
-1. **Impor**: catat batch, parse worksheet SAP, ambil dan simpan hanya `Order`, `Description`, dan `Functional Location`. Validasi nomor order dan nilai teks.
+1. **Impor**: catat batch, parse worksheet SAP, ambil dan simpan hanya `Order`, `Description`, dan `Functional Location`. Validasi nomor order dan nilai teks. Dalam transaksi yang sama, cari atau buat plan Draft minggu berjalan dan buat assignment Planned untuk setiap work order valid; PIC dan durasi belum diisi.
 2. **Normalisasi**: rapikan tiga nilai yang digunakan. Deteksi duplikasi nomor order dalam batch; jangan deduplikasi berdasarkan FunLoc. Kolom SAP lain diabaikan dan tidak disimpan.
 3. **Buat rencana**: buat `MaintenancePlan` untuk minggu dan lokasi target, lalu susun kelompok area/line.
 4. **Pilih order**: tautkan work order SAP ke assignment. Simpan perubahan rencana sebagai snapshot/override, bukan mengubah data sumber.
@@ -170,7 +170,7 @@ WorkAssignment 1 ─── 0..1 WorkExecution
 - Order yang tidak ditemukan pada sumber ditandai untuk review, bukan diam-diam dianggap SAP order yang valid.
 - Bedakan `null` (belum diisi) dari `0` (nilai nol).
 - `plannedDurationMinutes` adalah durasi kerja PIC yang ditugaskan dan tidak boleh negatif.
-- Satu order hanya boleh ditautkan ke satu minggu/rencana dan memiliki satu assignment, satu PIC, serta satu durasi rencana.
+- Satu order hanya boleh ditautkan ke satu minggu/rencana dan memiliki satu assignment. PIC dan durasi boleh kosong sebelum ditugaskan, tetapi wajib dilengkapi sebelum pekerjaan dijadwalkan/dipublikasikan.
 - PIC yang sama tidak boleh memiliki slot waktu bertumpang tindih pada work order yang berbeda.
 - Tanggal eksekusi seharusnya berada pada periode rencana.
 - Baris `Pekerjaan Tambahan` didukung tanpa nomor work order SAP.

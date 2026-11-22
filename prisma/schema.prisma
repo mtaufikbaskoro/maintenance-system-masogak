@@ -60,6 +60,18 @@ model SapImportBatch {
   @@index([importedAt])
 }
 
+model AreaLineMapping {
+  id                 String   @id @default(cuid())
+  functionalLocation String   @unique @db.VarChar(255)
+  areaName           String
+  machineDescription String?
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([areaName])
+}
+
 // Intentionally stores only the three approved SAP source values plus provenance.
 model SapWorkOrder {
   id                 String            @id @default(cuid())
@@ -127,14 +139,14 @@ model WorkAssignment {
   planId                     String
   sapWorkOrderId             String?           @unique
   groupId                    String?
-  picId                      String
-  picRole                    PicRole
+  picId                      String?
+  picRole                    PicRole?
   workOrderTypeCode          String?
   manualOrderNumber          String?
   manualDescription          String?           @db.Text
   descriptionOverride        String?           @db.Text
   functionalLocationOverride String?
-  plannedDurationMinutes     Int
+  plannedDurationMinutes     Int?
   plannedDate                DateTime?         @db.Date
   sortOrder                  Int               @default(0)
   status                     AssignmentStatus  @default(PLANNED)
@@ -144,7 +156,7 @@ model WorkAssignment {
   plan                       MaintenancePlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
   sapWorkOrder               SapWorkOrder?     @relation(fields: [sapWorkOrderId], references: [id], onDelete: Restrict)
   group                      MaintenanceGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  pic                        Person            @relation(fields: [picId], references: [id], onDelete: Restrict)
+  pic                        Person?           @relation(fields: [picId], references: [id], onDelete: Restrict)
   scheduleBlocks             ScheduleBlock[]
   execution                  WorkExecution?
 

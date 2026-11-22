@@ -28,18 +28,20 @@ Dokumen ini menjelaskan alur operasional mingguan untuk mengelola work order SAP
 1. Planner membuka **Work Order SAP** atau tombol **Impor SAP**, lalu memilih file Excel SAP.
 2. Aplikasi mencatat batch impor dan membaca hanya kolom **Order**, **Description**, dan **Functional Location**. Kolom SAP lainnya tidak disimpan.
 3. Aplikasi memvalidasi keberadaan nomor order dan teks yang diperlukan, serta mendeteksi nomor order yang berulang dalam batch.
-4. Planner meninjau ringkasan jumlah baris valid dan bermasalah. Baris bermasalah diperbaiki pada file sumber lalu diimpor ulang; data sumber yang sudah diimpor tidak diedit dari layar rencana.
-5. Work order yang sudah pernah dimasukkan ke rencana ditandai agar tidak dapat ditugaskan kembali ke minggu/rencana lain.
+4. Dalam transaksi impor yang sama, aplikasi mencari plan aktif minggu berjalan (site mengikuti konfigurasi); jika belum ada, aplikasi otomatis membuat plan berstatus **Draft** untuk minggu berjalan.
+5. Setiap work order valid dari batch langsung dibuat sebagai assignment berstatus **Planned** pada plan tersebut, tanpa mengisi PIC, role, durasi, area, atau jadwal secara asumtif.
+6. Planner meninjau ringkasan jumlah baris valid dan bermasalah serta melengkapi assignment. Baris bermasalah diperbaiki pada file sumber lalu diimpor ulang; data sumber yang sudah diimpor tidak diedit dari layar rencana.
+7. Work order yang sudah pernah dimasukkan ke rencana ditandai agar tidak dapat ditugaskan kembali ke minggu/rencana lain.
 
 **Hasil:** data sumber SAP tervalidasi dan dapat dipilih untuk perencanaan.
 
 ### Tahap C — Membuat rencana mingguan
 
-1. Planner memilih **Buat rencana**.
-2. Isi nama rencana, nomor minggu, tahun, rentang tanggal, dan site/plant.
-3. Simpan sebagai **Draft**.
+1. Plan minggu berjalan dibuat otomatis saat impor SAP pertama pada minggu tersebut. Planner dapat membuka plan itu dari **Rencana Mingguan**.
+2. Jika diperlukan, planner tetap dapat membuat plan manual untuk kebutuhan khusus.
+3. Pastikan plan berisi nama, nomor minggu, tahun, rentang tanggal, dan site/plant yang benar; plan otomatis dimulai dengan status **Draft**.
 4. Buat kelompok area/line sesuai kebutuhan, misalnya UTILITY atau SPS 600ml, lalu atur urutannya dan tentukan team leader setiap kelompok.
-5. Pastikan rentang tanggal rencana konsisten dengan minggu yang dipilih.
+5. Pastikan rentang tanggal plan konsisten dengan minggu yang dipilih.
 
 **Hasil:** draft rencana mingguan beserta kelompok kerja tersedia.
 
@@ -52,7 +54,7 @@ Dokumen ini menjelaskan alur operasional mingguan untuk mengelola work order SAP
 5. Tentukan tanggal pelaksanaan dan catatan kerja.
 6. Untuk pekerjaan tambahan, isi nomor (jika ada), deskripsi, area, PIC, dan durasi secara manual.
 
-**Aturan:** satu work order SAP hanya boleh memiliki satu assignment pada satu rencana; satu assignment memiliki satu PIC dan satu durasi rencana. Durasi tidak boleh negatif.
+**Aturan:** satu work order SAP hanya boleh memiliki satu assignment pada satu rencana. Assignment hasil impor boleh belum memiliki PIC, role, dan durasi (nilai kosong/null) sampai planner melengkapinya; setelah ditugaskan, satu assignment memiliki tepat satu PIC dan satu durasi rencana. Durasi tidak boleh negatif.
 
 ### Tahap E — Menyusun jadwal dan menerbitkan rencana
 
