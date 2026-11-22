@@ -399,6 +399,27 @@ export async function saveAssignment(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function setAssignmentScheduleSlot(formData: FormData) {
+  const assignmentId = text(formData, "assignmentId");
+  const day = Number(text(formData, "day"));
+  const hour = Number(text(formData, "hour"));
+  const enabled = text(formData, "enabled") === "true";
+  if (!assignmentId || !Number.isInteger(day) || day < 0 || day > 6 || !Number.isInteger(hour) || hour < 7 || hour > 23) throw new Error("Jadwal tidak valid.");
+  const assignment = await prisma.workAssignment.findUnique({ where: { id: assignmentId }, include: { plan: true } });
+  if (!assignment) throw new Error("Work order tidak ditemukan.");
+  if (assignment.plan.status !== PlanStatus.DRAFT) throw new Error("Jadwal hanya dapat diubah pada plan Draft.");
+  const date = new Date(assignment.plan.periodStart);
+  date.setUTCDate(date.getUTCDate() + day);
+  const startAt = new Date(date);
+  startAt.setUTCHours(hour, 0, 0, 0);
+  const endAt = new Date(startAt);
+  endAt.setUTCHours(hour + 1, 0, 0, 0);
+  const existing = await prisma.scheduleBlock.findFirst({ where: { workAssignmentId: assignmentId, startAt } });
+  if (enabled && !existing) await prisma.scheduleBlock.create({ data: { workAssignmentId: assignmentId, startAt, endAt, plannedHours: 1 } });
+  if (!enabled && existing) await prisma.scheduleBlock.delete({ where: { id: existing.id } });
+  revalidatePath("/");
+}
+
 export async function deleteAssignment(formData: FormData) {
   const id = text(formData, "id");
   const assignment = await prisma.workAssignment.findUnique({

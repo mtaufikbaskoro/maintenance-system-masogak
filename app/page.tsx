@@ -19,13 +19,15 @@ async function DashboardData() {
     prisma.sapWorkOrder.findMany({ orderBy: { createdAt: "desc" }, take: 100, include: { sourceBatch: { select: { sourceFileName: true } } } }),
     prisma.maintenanceGroup.findMany({ orderBy: [{ planId: "asc" }, { sortOrder: "asc" }, { name: "asc" }], include: { teamLeader: { select: { displayName: true } } } }),
     prisma.workAssignment.findMany({
-      orderBy: [{ planId: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
-      include: {
-        plan: { select: { name: true, status: true } },
-        group: { select: { name: true } },
-        pic: { select: { displayName: true } },
-        sapWorkOrder: { select: { id: true, sapOrderNumber: true, description: true, functionalLocation: true } },
-      },
+        orderBy: [{ planId: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
+        include: {
+          plan: { select: { name: true, status: true } },
+          group: { select: { name: true } },
+          pic: { select: { displayName: true } },
+          sapWorkOrder: { select: { id: true, sapOrderNumber: true, description: true, functionalLocation: true } },
+          scheduleBlocks: true,
+          execution: true,
+        },
     }),
     prisma.areaLineMapping.findMany({ orderBy: [{ areaName: "asc" }, { functionalLocation: "asc" }] }),
   ]);
@@ -76,6 +78,10 @@ async function DashboardData() {
         workOrderTypeCode: assignment.workOrderTypeCode ?? "",
         notes: assignment.notes ?? "",
         status: assignment.status,
+        scheduleBlocks: assignment.scheduleBlocks.map(block => ({ startAt: block.startAt.toISOString(), endAt: block.endAt.toISOString() })),
+        actualDurationHours: assignment.execution?.actualDurationHours == null ? null : Number(assignment.execution.actualDurationHours),
+        executionDate: assignment.execution?.executionDate.toISOString().slice(0, 10) ?? "",
+        executionNote: assignment.execution?.note ?? "",
       }))}
     />
   );
