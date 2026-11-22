@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { AssignmentStatus, PicRole, PlanStatus, Prisma } from "@/app/generated/prisma/client";
 import ExcelJS from "exceljs";
 
-function currentWeekPeriod(now = new Date()) {
+function currentWeekPeriod(now: Date) {
+  if (Number.isNaN(now.getTime())) throw new Error("Tanggal di sel A1 tidak valid.");
   const local = new Date(now);
   local.setHours(0, 0, 0, 0);
   const day = local.getDay();
@@ -48,6 +49,22 @@ export async function importSapFile(formData: FormData) {
   }
   const sheet = workbook.worksheets[0];
   if (!sheet) throw new Error("File tidak memiliki worksheet.");
+
+  const a1 = sheet.getCell("A1");
+  const a1Value = a1.value;
+  let fileDate: Date;
+  if (a1Value instanceof Date) {
+    fileDate = a1Value;
+  } else if (typeof a1Value === "number") {
+    fileDate = new Date(Date.UTC(1899, 11, 30) + a1Value * 24 * 60 * 60 * 1000);
+  } else {
+    const rawDate = String(a1.text || a1Value || "").trim();
+    const dateMatch = rawDate.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+    fileDate = dateMatch
+      ? new Date(Number(dateMatch[3]), Number(dateMatch[2]) - 1, Number(dateMatch[1]))
+      : new Date(rawDate);
+  }
+  if (Number.isNaN(fileDate.getTime())) throw new Error("Tanggal file tidak ditemukan atau tidak valid di sel A1.");
 
   let headerRow = 0;
   let indexes: Record<string, number> = {};
@@ -120,7 +137,7 @@ export async function importSapFile(formData: FormData) {
   }
 
   const batch = await prisma.$transaction(async (tx) => {
-    const { year, weekNumber, monday, sunday } = currentWeekPeriod();
+    const { year, weekNumber, monday, sunday } = currentWeekPeriod(fileDate);
     let plan = await tx.maintenancePlan.findFirst({
       where: { year, weekNumber, status: { in: [PlanStatus.DRAFT, PlanStatus.PUBLISHED, PlanStatus.IN_PROGRESS] } },
       orderBy: { createdAt: "asc" },
