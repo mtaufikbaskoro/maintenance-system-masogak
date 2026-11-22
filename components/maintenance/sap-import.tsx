@@ -6,7 +6,7 @@ import { importSapFile } from "@/app/actions";
 
 type Batch = { id: string; sourceFileName: string; importedAt: string; status: string; rowCount: number; errorCount: number };
 type Order = { id: string; sapOrderNumber: string; description: string; functionalLocation: string; sourceRowNumber: number | null; sourceBatch: { sourceFileName: string } };
-type AreaMapping = { functionalLocation: string; areaName: string; active: boolean };
+type AreaMapping = { functionalLocation: string; areaName: string; active: boolean; durationHours: number | null };
 
 export function SapImport({ batches, orders, areaMappings }: { batches: Batch[]; orders: Order[]; areaMappings: AreaMapping[] }) {
   const [busy, setBusy] = React.useState(false);
@@ -29,9 +29,9 @@ export function SapImport({ batches, orders, areaMappings }: { batches: Batch[];
   return <div className="space-y-6">
     <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-         <div className="flex items-start gap-3"><span className="rounded-xl bg-blue-50 p-3 text-blue-700"><FileSpreadsheet size={20}/></span><div><h2 className="text-sm font-bold">Impor work order SAP</h2><p className="mt-1 text-xs leading-5 text-slate-500">Unggah Excel .xlsx berisi kolom Order, Description, dan Functional Location. FunLoc dicocokkan dengan master area/line untuk pengelompokan otomatis.</p></div></div>
+         <div className="flex items-start gap-3"><span className="rounded-xl bg-blue-50 p-3 text-blue-700"><FileSpreadsheet size={20}/></span><div><h2 className="text-sm font-bold">Impor work order SAP</h2><p className="mt-1 text-xs leading-5 text-slate-500">Unggah Excel .xlsx. Seluruh kolom dan nilai pada setiap baris disimpan; Order, Description, dan Functional Location digunakan untuk penjadwalan. Durasi rencana diambil dari master area/line (jam) dan dikonversi ke menit.</p></div></div>
         <form onSubmit={submit} className="mt-6 space-y-4">
-          <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 text-center hover:border-blue-400 hover:bg-blue-50/40"><Upload size={20} className="mb-2 text-slate-500"/><span className="text-xs font-semibold text-slate-700">Pilih file Excel SAP</span><span className="mt-1 text-[10px] text-slate-400">Maksimal 15 MB · hanya data tiga kolom yang disimpan</span><input required name="file" type="file" accept=".xlsx,.xls" className="sr-only" onChange={e => { const f=e.target.files?.[0]; if(f) setMessage(`File dipilih: ${f.name}`); }}/></label>
+          <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 text-center hover:border-blue-400 hover:bg-blue-50/40"><Upload size={20} className="mb-2 text-slate-500"/><span className="text-xs font-semibold text-slate-700">Pilih file Excel SAP</span><span className="mt-1 text-[10px] text-slate-400">Maksimal 15 MB · seluruh kolom Excel dipertahankan</span><input required name="file" type="file" accept=".xlsx,.xls" className="sr-only" onChange={e => { const f=e.target.files?.[0]; if(f) setMessage(`File dipilih: ${f.name}`); }}/></label>
           {message && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{message}</p>}{error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
           <button disabled={busy} className="h-10 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{busy ? "Memproses file…" : "Impor data"}</button>
         </form>

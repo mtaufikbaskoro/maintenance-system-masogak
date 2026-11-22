@@ -66,7 +66,17 @@ export async function importSapFile(formData: FormData) {
   }
   if (!headerRow) throw new Error("Kolom wajib Order, Description, dan Functional Location tidak ditemukan.");
 
-  const valid: { sapOrderNumber: string; description: string; functionalLocation: string; sourceRowNumber: number }[] = [];
+  const headers = new Map<number, string>();
+  sheet.getRow(headerRow).eachCell((cell, col) => {
+    const header = String(cell.text || cell.value || "").trim();
+    if (header) headers.set(col, header);
+  });
+  const valid: {
+    sapOrderNumber: string; message: string | null; basicStart: Date | null; basicFinish: Date | null; releaseDate: Date | null;
+    description: string; systemStatus: string | null; functionalLocation: string; functionalLocationDescription: string | null;
+    maintenancePlanNumber: string | null; orderType: string | null; planTotalCost: number | null; totalCostActual: number | null;
+    costCenter: string | null; priority: string | null; userStatus: string | null; sourceRowNumber: number;
+  }[] = [];
   const seen = new Set<string>();
   let errorCount = 0;
   for (let rowNo = headerRow + 1; rowNo <= sheet.rowCount; rowNo++) {
@@ -81,7 +91,32 @@ export async function importSapFile(formData: FormData) {
       continue;
     }
     seen.add(order);
-    valid.push({ sapOrderNumber: order, description, functionalLocation, sourceRowNumber: rowNo });
+    const valueByHeader = (name: string) => {
+      const entry = [...headers.entries()].find(([, header]) => normalizeHeader(header) === normalizeHeader(name));
+      return entry ? valueAt(entry[0]) : "";
+    };
+    const optionalDate = (value: string) => {
+      if (!value) return null;
+      const match = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+      const date = match ? new Date(Date.UTC(Number(match[3]), Number(match[2]) - 1, Number(match[1]))) : new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    };
+    const optionalNumber = (value: string) => {
+      if (!value) return null;
+      const parsed = Number(value.replace(",", "."));
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+    valid.push({
+      sapOrderNumber: order, message: valueByHeader("Message") || null,
+      basicStart: optionalDate(valueByHeader("Bsc start")), basicFinish: optionalDate(valueByHeader("Basic fin.")),
+      releaseDate: optionalDate(valueByHeader("Release")), description,
+      systemStatus: valueByHeader("System status") || null, functionalLocation,
+      functionalLocationDescription: valueByHeader("Description of functional location") || null,
+      maintenancePlanNumber: valueByHeader("MntPlan") || null, orderType: valueByHeader("Type") || null,
+      planTotalCost: optionalNumber(valueByHeader("PlanTotCos")), totalCostActual: optionalNumber(valueByHeader("TotCostAct")),
+      costCenter: valueByHeader("Cost Ctr") || null, priority: valueByHeader("Priority") || null,
+      userStatus: valueByHeader("UserStatus") || null, sourceRowNumber: rowNo,
+    });
   }
 
   const batch = await prisma.$transaction(async (tx) => {
@@ -111,7 +146,7 @@ export async function importSapFile(formData: FormData) {
     const areaMappings = await tx.areaLineMapping.findMany({ where: { active: true } });
     const mappingByFunLoc = new Map(areaMappings.map((mapping) => [normalizeFunLoc(mapping.functionalLocation), mapping]));
     const importedOrders = valid.length ? await tx.sapWorkOrder.findMany({
-      where: { sourceBatchId: created.id }, select: { id: true, functionalLocation: true }, orderBy: { sourceRowNumber: "asc" },
+      where: { sourceBatchId: created.id }, select: { id: true, functionalLocation: true, orderType: true }, orderBy: { sourceRowNumber: "asc" },
     }) : [];
     const areaIds = new Map<string, string>();
     let mappedCount = 0;
@@ -135,7 +170,15 @@ export async function importSapFile(formData: FormData) {
       } else {
         unmatchedCount++;
       }
-      await tx.workAssignment.create({ data: { planId: plan.id, sapWorkOrderId: order.id, groupId, sortOrder: importedOrders.indexOf(order), status: AssignmentStatus.PLANNED } });
+      await tx.workAssignment.create({ data: {
+        planId: plan.id,
+        sapWorkOrderId: order.id,
+        groupId,
+        plannedDurationMinutes: mapping?.durationHours == null ? null : Math.round(mapping.durationHours * 60),
+        workOrderTypeCode: order.orderType,
+        sortOrder: importedOrders.indexOf(order),
+        status: AssignmentStatus.PLANNED,
+      } });
     }
     return { ...created, planId: plan.id, planName: plan.name, mapped: mappedCount, unmatched: unmatchedCount };
   });
@@ -144,6 +187,7 @@ export async function importSapFile(formData: FormData) {
 }
 
 function normalizeFunLoc(value: string) { return value.trim().toUpperCase().replace(/\s+/g, ""); }
+function normalizeHeader(value: string) { return value.trim().toLowerCase().replace(/\s+/g, " "); }
 
 export async function importAreaMappings(formData: FormData) {
   const file = formData.get("file");
@@ -158,22 +202,27 @@ export async function importAreaMappings(formData: FormData) {
   let areaCol = 0;
   let funLocCol = 0;
   let descriptionCol = 0;
+  let durationCol = 0;
   for (let rowNo = 1; rowNo <= Math.min(sheet.rowCount, 30); rowNo++) {
     const cols: Record<string, number> = {};
     sheet.getRow(rowNo).eachCell((cell, col) => { cols[String(cell.text || cell.value || "").trim().toLowerCase()] = col; });
     const area = Object.keys(cols).find(key => key === "area" || key === "area/line" || key === "area / line");
     const funloc = Object.keys(cols).find(key => key === "funloc" || key === "functional location");
     const desc = Object.keys(cols).find(key => key === "mc desc" || key === "machine description");
-    if (area && funloc) { headerRow = rowNo; areaCol = cols[area]; funLocCol = cols[funloc]; descriptionCol = desc ? cols[desc] : 0; break; }
+    const duration = Object.keys(cols).find(key => ["duration", "duration (hours)", "duration hours", "duration (hr)", "duration (h)", "durasi", "durasi (jam)"].includes(key) || /\bduration\b/.test(key));
+    if (area && funloc) { headerRow = rowNo; areaCol = cols[area]; funLocCol = cols[funloc]; descriptionCol = desc ? cols[desc] : 0; durationCol = duration ? cols[duration] : 0; break; }
   }
   if (!headerRow) throw new Error("Kolom Area dan FunLoc tidak ditemukan.");
-    const entries = new Map<string, { functionalLocation: string; areaName: string; machineDescription: string | null }>();
+  const entries = new Map<string, { functionalLocation: string; areaName: string; machineDescription: string | null; durationHours: number | null }>();
   let errors = 0;
   for (let rowNo = headerRow + 1; rowNo <= sheet.rowCount; rowNo++) {
     const row = sheet.getRow(rowNo);
     const functionalLocation = String(row.getCell(funLocCol).text || row.getCell(funLocCol).value || "").trim();
     let areaName = String(row.getCell(areaCol).text || row.getCell(areaCol).value || "").trim();
     const machineDescription = descriptionCol ? String(row.getCell(descriptionCol).text || row.getCell(descriptionCol).value || "").trim() || null : null;
+    const durationCell = durationCol ? row.getCell(durationCol) : null;
+    const rawDuration = durationCell ? Number(durationCell.value ?? durationCell.text) : NaN;
+    const durationHours = Number.isFinite(rawDuration) && rawDuration >= 0 ? rawDuration : null;
     if (!functionalLocation && !areaName) continue;
     if (!functionalLocation || !areaName) { errors++; continue; }
     // Keep all water-treatment equipment in its own area, not under its parent production line.
@@ -183,14 +232,14 @@ export async function importAreaMappings(formData: FormData) {
     const key = normalizeFunLoc(functionalLocation);
     const existing = entries.get(key);
     if (existing && existing.areaName.toLowerCase() !== areaName.toLowerCase()) { errors++; continue; }
-    entries.set(key, { functionalLocation, areaName, machineDescription });
+    entries.set(key, { functionalLocation, areaName, machineDescription, durationHours });
   }
   const result = await prisma.$transaction(async tx => {
     let created = 0;
     let updated = 0;
     for (const entry of entries.values()) {
       const current = await tx.areaLineMapping.findUnique({ where: { functionalLocation: entry.functionalLocation } });
-      if (current) { await tx.areaLineMapping.update({ where: { id: current.id }, data: { areaName: entry.areaName, machineDescription: entry.machineDescription, active: true } }); updated++; }
+      if (current) { await tx.areaLineMapping.update({ where: { id: current.id }, data: { areaName: entry.areaName, machineDescription: entry.machineDescription, durationHours: entry.durationHours, active: true } }); updated++; }
       else { await tx.areaLineMapping.create({ data: entry }); created++; }
     }
     return { created, updated };
@@ -204,9 +253,12 @@ export async function upsertAreaMapping(formData: FormData) {
   const functionalLocation = text(formData, "functionalLocation");
   const areaName = text(formData, "areaName");
   const machineDescription = text(formData, "machineDescription") || null;
+  const durationValue = text(formData, "durationHours");
+  const durationHours = durationValue ? Number(durationValue) : null;
   if (!functionalLocation || !areaName) throw new Error("FunLoc dan area/line wajib diisi.");
-  if (id) await prisma.areaLineMapping.update({ where: { id }, data: { functionalLocation, areaName, machineDescription, active: text(formData, "active") !== "false" } });
-  else await prisma.areaLineMapping.upsert({ where: { functionalLocation }, create: { functionalLocation, areaName, machineDescription }, update: { areaName, machineDescription, active: true } });
+  if (durationHours !== null && (!Number.isFinite(durationHours) || durationHours < 0)) throw new Error("Durasi master harus berupa jam tidak negatif.");
+  if (id) await prisma.areaLineMapping.update({ where: { id }, data: { functionalLocation, areaName, machineDescription, durationHours, active: text(formData, "active") !== "false" } });
+  else await prisma.areaLineMapping.upsert({ where: { functionalLocation }, create: { functionalLocation, areaName, machineDescription, durationHours }, update: { areaName, machineDescription, durationHours, active: true } });
   revalidatePath("/");
 }
 

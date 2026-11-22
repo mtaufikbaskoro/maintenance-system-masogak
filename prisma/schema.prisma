@@ -65,6 +65,7 @@ model AreaLineMapping {
   functionalLocation String   @unique @db.VarChar(255)
   areaName           String
   machineDescription String?
+  durationHours      Float?
   active             Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -72,18 +73,31 @@ model AreaLineMapping {
   @@index([areaName])
 }
 
-// Intentionally stores only the three approved SAP source values plus provenance.
+// Stores SAP source fields individually, plus source provenance.
 model SapWorkOrder {
-  id                 String            @id @default(cuid())
-  sapOrderNumber     String
-  description        String            @db.Text
-  functionalLocation String            @db.VarChar(255)
-  sourceBatchId      String
-  sourceRowNumber    Int?
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  sourceBatch        SapImportBatch   @relation(fields: [sourceBatchId], references: [id], onDelete: Restrict)
-  assignments        WorkAssignment[]
+  id                            String            @id @default(cuid())
+  sapOrderNumber                String
+  message                       String?
+  basicStart                    DateTime?         @db.Date
+  basicFinish                   DateTime?         @db.Date
+  releaseDate                   DateTime?         @db.Date
+  description                   String            @db.Text
+  systemStatus                  String?           @db.Text
+  functionalLocation            String            @db.VarChar(255)
+  functionalLocationDescription String?           @db.Text
+  maintenancePlanNumber         String?
+  orderType                     String?
+  planTotalCost                 Float?
+  totalCostActual               Float?
+  costCenter                    String?
+  priority                      String?
+  userStatus                    String?
+  sourceBatchId                 String
+  sourceRowNumber               Int?
+  createdAt                     DateTime          @default(now())
+  updatedAt                     DateTime          @updatedAt
+  sourceBatch                   SapImportBatch    @relation(fields: [sourceBatchId], references: [id], onDelete: Restrict)
+  assignments                   WorkAssignment[]
 
   @@unique([sourceBatchId, sapOrderNumber])
   @@index([sapOrderNumber])
