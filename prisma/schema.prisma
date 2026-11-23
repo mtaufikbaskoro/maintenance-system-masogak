@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
+// Relational source data and planning snapshots for weekly maintenance.
 generator client {
   provider = "prisma-client"
   output   = "../app/generated/prisma"
@@ -10,4 +6,218 @@ generator client {
 
 datasource db {
   provider = "mysql"
+}
+
+enum ImportStatus {
+  IMPORTED
+  VALIDATED
+  FAILED
+}
+
+enum PlanStatus {
+  DRAFT
+  PUBLISHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AssignmentStatus {
+  PLANNED
+  ASSIGNED
+  SCHEDULED
+  IN_PROGRESS
+  DONE
+  SKIPPED
+  CANCELLED
+}
+
+enum PicRole {
+  T
+  O
+  P
+}
+
+enum ExecutionStatus {
+  STARTED
+  COMPLETED
+  PARTIAL
+  NOT_DONE
+}
+
+model SapImportBatch {
+  id               String          @id @default(cuid())
+  sourceFileName   String
+  importedAt       DateTime        @default(now())
+  sourceReportDate DateTime?       @db.Date
+  periodStart      DateTime?       @db.Date
+  periodEnd        DateTime?       @db.Date
+  status           ImportStatus    @default(IMPORTED)
+  rowCount         Int             @default(0)
+  errorCount       Int             @default(0)
+  workOrders       SapWorkOrder[]
+
+  @@index([importedAt])
+}
+
+model AreaLineMapping {
+  id                 String   @id @default(cuid())
+  functionalLocation String   @unique @db.VarChar(255)
+  areaName           String
+  machineDescription String?
+  durationHours      Float?
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([areaName])
+}
+
+// Stores SAP source fields individually, plus source provenance.
+model SapWorkOrder {
+  id                            String            @id @default(cuid())
+  sapOrderNumber                String
+  message                       String?
+  basicStart                    DateTime?         @db.Date
+  basicFinish                   DateTime?         @db.Date
+  releaseDate                   DateTime?         @db.Date
+  description                   String            @db.Text
+  systemStatus                  String?           @db.Text
+  functionalLocation            String            @db.VarChar(255)
+  functionalLocationDescription String?           @db.Text
+  maintenancePlanNumber         String?
+  orderType                     String?
+  planTotalCost                 Float?
+  totalCostActual               Float?
+  costCenter                    String?
+  priority                      String?
+  userStatus                    String?
+  sourceBatchId                 String
+  sourceRowNumber               Int?
+  createdAt                     DateTime          @default(now())
+  updatedAt                     DateTime          @updatedAt
+  sourceBatch                   SapImportBatch    @relation(fields: [sourceBatchId], references: [id], onDelete: Restrict)
+  assignments                   WorkAssignment[]
+
+  @@unique([sourceBatchId, sapOrderNumber])
+  @@index([sapOrderNumber])
+  @@index([functionalLocation])
+  @@index([sourceBatchId])
+}
+
+model MaintenancePlan {
+  id         String            @id @default(cuid())
+  name       String
+  weekNumber Int
+  year       Int
+  periodStart DateTime         @db.Date
+  periodEnd   DateTime         @db.Date
+  site        String?
+  status      PlanStatus       @default(DRAFT)
+  createdBy   String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  groups      MaintenanceGroup[]
+  assignments WorkAssignment[]
+
+  @@index([year, weekNumber, site])
+}
+
+model MaintenanceGroup {
+  id            String            @id @default(cuid())
+  planId        String
+  name          String
+  teamLeaderId  String?
+  sortOrder     Int               @default(0)
+  plan          MaintenancePlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  teamLeader    Person?           @relation("TeamLeader", fields: [teamLeaderId], references: [id], onDelete: SetNull)
+  assignments   WorkAssignment[]
+
+  @@unique([planId, name])
+  @@index([teamLeaderId])
+}
+
+model Person {
+  id                  String             @id @default(cuid())
+  employeeCode        String?            @unique
+  displayName         String
+  active              Boolean            @default(true)
+  isTeamLead          Boolean            @default(false)
+  picGroupId          String?
+  picGroup            PicGroup?          @relation(fields: [picGroupId], references: [id], onDelete: SetNull)
+  assignments         WorkAssignment[]
+  leadingGroups       MaintenanceGroup[]  @relation("TeamLeader")
+
+  @@index([displayName])
+  @@index([picGroupId])
+}
+
+model PicGroup {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  people    Person[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkAssignment {
+  id                         String            @id @default(cuid())
+  planId                     String
+  sapWorkOrderId             String?           @unique
+  groupId                    String?
+  picId                      String?
+  picRole                    PicRole?
+  workOrderTypeCode          String?
+  manualOrderNumber          String?
+  manualDescription          String?           @db.Text
+  descriptionOverride        String?           @db.Text
+  functionalLocationOverride String?
+  plannedDurationMinutes     Int?
+  plannedDate                DateTime?         @db.Date
+  sortOrder                  Int               @default(0)
+  status                     AssignmentStatus  @default(PLANNED)
+  notes                      String?           @db.Text
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+  plan                       MaintenancePlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sapWorkOrder               SapWorkOrder?     @relation(fields: [sapWorkOrderId], references: [id], onDelete: Restrict)
+  group                      MaintenanceGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  pic                        Person?           @relation(fields: [picId], references: [id], onDelete: Restrict)
+  scheduleBlocks             ScheduleBlock[]
+  execution                  WorkExecution?
+
+  @@index([planId, status])
+  @@index([groupId, sortOrder])
+  @@index([picId])
+  @@index([plannedDate])
+}
+
+model ScheduleBlock {
+  id                 String         @id @default(cuid())
+  workAssignmentId   String
+  startAt            DateTime
+  endAt              DateTime
+  plannedHours       Decimal?       @db.Decimal(6, 2)
+  note               String?        @db.Text
+  workAssignment     WorkAssignment @relation(fields: [workAssignmentId], references: [id], onDelete: Cascade)
+
+  @@index([startAt, endAt])
+  @@index([workAssignmentId])
+}
+
+model WorkExecution {
+  id                   String          @id @default(cuid())
+  workAssignmentId     String          @unique
+  executionDate        DateTime        @db.Date
+  actualStartAt        DateTime?
+  actualEndAt          DateTime?
+  actualDurationHours  Decimal?        @db.Decimal(6, 2)
+  status               ExecutionStatus @default(STARTED)
+  note                 String?         @db.Text
+  recordedBy           String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  workAssignment       WorkAssignment @relation(fields: [workAssignmentId], references: [id], onDelete: Cascade)
+
+  @@index([executionDate, status])
 }
