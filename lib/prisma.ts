@@ -6,8 +6,10 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient(): PrismaClient {
-  const connectionString =
-    process.env.DATABASE_URL || "mysql://root:password@localhost:3306/mydb";
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL must be configured before using the database.");
+  }
   const adapter = new PrismaMariaDb(connectionString);
   return new PrismaClient({ adapter });
 }
