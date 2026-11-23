@@ -1,36 +1,26 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Maintenance System
 
-## Getting Started
+Next.js 16 application using Prisma 7 and a MySQL-compatible database.
 
-First, run the development server:
+## Local development
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Install dependencies with `npm install`.
+2. Create `.env` and set `DATABASE_URL` to your MySQL connection string:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+   ```dotenv
+   DATABASE_URL="mysql://USER:PASSWORD@HOST:3306/DATABASE"
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Ensure the database schema has been applied, then run `npm run dev`.
+4. Open [http://localhost:3000](http://localhost:3000).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The Prisma schema is in `prisma/schema.prisma`. Do not use a local-only database URL for a Vercel deployment.
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Push this project to a Git provider and import it into Vercel. Vercel detects Next.js; keep the default build command (`npm run build`).
+2. Provision a remotely accessible MySQL database (for example, through a managed MySQL provider) and apply the schema in `prisma/schema.prisma`.
+3. In **Project → Settings → Environment Variables**, add `DATABASE_URL` with the provider's MySQL connection URL. Add it for Production and Preview as appropriate. Treat it as a secret and never commit it.
+4. Redeploy after setting or changing environment variables. Verify the deployment and database-backed flows.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The Vercel build runs `prisma db push` before building, syncing the Prisma schema directly to the configured database. This does not keep migration history, and schema changes that may lose data are not automatically accepted. Use a managed MySQL database with backups, and test schema changes against a preview database before deploying to production.
