@@ -10,7 +10,18 @@ function createPrismaClient(): PrismaClient {
   if (!connectionString) {
     throw new Error("DATABASE_URL must be configured before using the database.");
   }
-  const adapter = new PrismaMariaDb(connectionString);
+  // Keep the pool small for serverless deployments; each Vercel instance
+  // creates its own pool, so the database connection limit is shared across
+  // concurrently active instances.
+  const url = new URL(connectionString);
+  const adapter = new PrismaMariaDb({
+    host: url.hostname,
+    port: Number(url.port || 3306),
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    database: url.pathname.replace(/^\//, ""),
+    connectionLimit: Number(process.env.DATABASE_CONNECTION_LIMIT ?? 5),
+  });
   return new PrismaClient({ adapter });
 }
 
